@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Laga - Match Stats Pro Football (V10)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        /*
+        =============================
+        V10 CSS: FOKUS STABILITAS LAYOUT
+        =============================
+        */
+        :root {
+            --primary: #38003c; /* Ungu */
+            --accent: #00ff85;  /* Hijau Neon */
+            --danger: #ff0050;  /* Pink/Merah */
+            --white: #ffffff;
+            --gray: #f4f4f4;
+            --border: #ddd;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body { margin: 0; background-color: var(--gray); color: var(--primary); }
+        .hidden { display: none !important; }
+
+        /* --- BUTTONS & UTILITIES --- */
+        .btn {
+            padding: 8px 16px; border: none; cursor: pointer; font-weight: bold;
+            border-radius: 4px; text-transform: uppercase; font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+        .btn-primary { background-color: var(--primary); color: var(--accent); }
+        .btn-success { background-color: var(--accent); color: var(--primary); }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-outline { background: white; border: 2px solid var(--primary); color: var(--primary); }
+        .btn-mini-text { font-size: 0.7rem; padding: 4px 8px; }
+        .btn-dec, .btn-inc { width: 25px; height: 25px; padding: 0; margin: 0 5px; font-size: 1.1rem; border-radius: 50%; }
+        .btn-dec { background: #eee; border: 1px solid #ccc; color: #333;}
+        .btn-inc { background: var(--primary); color: var(--accent);}
+        
+        /* --- SETUP & MODAL STYLES --- */
+        #setup-page {
+            max-width: 900px; margin: 30px auto; background: white; padding: 30px;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .setup-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+        .setup-container { display: flex; gap: 30px; }
+        .setup-col { flex: 1; }
+        .team-title-input { width: 100%; padding: 10px; font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; border: 2px solid var(--primary); }
+        .player-inputs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-bottom: 15px; }
+        .player-input { padding: 6px; border: 1px solid #ccc; border-radius: 3px; width: 100%; font-size: 0.9rem; }
+        .section-label { font-size: 0.8rem; font-weight: bold; color: #666; margin-top: 10px; margin-bottom: 5px; display: block; text-transform: uppercase; }
+
+        .logo-upload-section { margin-bottom: 15px; text-align: center; }
+        .logo-preview { width: 60px; height: 60px; border: 1px dashed #ccc; margin: 5px auto; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .logo-preview img { width: 100%; height: 100%; object-fit: contain; }
+        
+        /* --- MAIN BOARD STYLES --- */
+        #main-page { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        .match-header {
+            background-color: var(--primary); color: white; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 10;
+        }
+        .timer-section { text-align: center; flex: 1; }
+        #timer-display { font-size: 2.2rem; font-weight: 800; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
+        
+        /* Perbaikan CSS untuk Logo di Header */
+        .team-display { 
+            width: 150px; 
+            text-align: center; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center;
+        }
+        .team-logo { 
+            width: 40px; 
+            height: 40px; 
+            margin-bottom: 5px;
+            flex-shrink: 0; 
+        }
+        .team-logo img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            max-width: 100%; 
+            max-height: 100%; 
+        }
+        /* End Perbaikan Logo Header */
+        
+        /* Added Time Styles */
+        .added-time-box { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+        #input-added-time {
+            width: 40px; 
+            text-align: center; 
+            font-size: 0.8rem;
+            margin: 0 5px;
+            padding: 2px;
+            color: var(--primary);
+        }
+        #added-time-display {
+             font-size:0.9rem; 
+             font-weight: bold;
+             color: var(--danger);
+        }
+
+        .score-box { font-size: 2rem; font-weight: bold; min-width: 60px; text-align: center; }
+
+        .control-area { flex: 1; display: flex; overflow: hidden; background: #eee; padding: 10px; gap: 10px; }
+        
+        .team-panel { 
+            flex: 1; background: white; border-radius: 6px; padding: 10px; 
+            display: flex; flex-direction: column; gap: 10px;
+            overflow-y: auto; /* Memastikan panel dapat discroll jika banyak stat */
+        }
+        .team-panel.home { border-top: 5px solid var(--primary); }
+        .team-panel.away { border-top: 5px solid var(--danger); }
+        
+        /* Statistik Grid yang Dikelompokkan */
+        .stats-group { 
+            display: flex; flex-direction: column; gap: 8px; border: 1px solid #ddd; 
+            padding: 8px; border-radius: 4px; background: #f8f8f8;
+        }
+        .stat-group-label { font-size: 0.75rem; font-weight: bold; color: #555; text-align: center; margin-bottom: 4px; border-bottom: 1px dashed #ccc; padding-bottom: 3px;}
+        .stat-card {
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .stat-label { font-size: 0.8rem; font-weight: 600; color: #333; }
+        .stat-val-disp { font-weight: bold; min-width: 20px; text-align: center; display: inline-block; }
+        
+        /* Timeline/Log Panel */
+        .log-panel { 
+            width: 300px; 
+            background: white; 
+            border-radius: 6px; 
+            padding: 10px; 
+            border-top: 5px solid var(--accent);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .log-list { list-style: none; padding: 0; margin: 0; }
+        .log-item { font-size: 0.8rem; padding: 5px 0; border-bottom: 1px dotted #eee; }
+        .log-item strong { margin-right: 5px; }
+
+        /* --- POSSESSION BAR --- */
+        .bottom-bar { padding: 10px; background: white; border-top: 1px solid #ddd; }
+        .progress-container { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 5px; }
+        .bar-home { background: var(--primary); transition: width 0.5s; }
+        .bar-away { background: var(--danger); transition: width 0.5s; }
+        .possession-ui { display: flex; gap: 5px; margin-bottom: 10px; }
+        .poss-btn { flex: 1; padding: 8px; opacity: 0.5; transition: opacity 0.2s; }
+        .poss-btn.active { opacity: 1; border: 2px solid var(--accent); }
+        
+        /* --- RESULT PAGE STYLES --- */
+        #result-page { max-width: 800px; margin: 20px auto; background: white; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        #export-area { background: white; padding: 20px; }
+        .result-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .result-table td, .result-table th { padding: 8px; border-bottom: 1px solid #eee; text-align: center; }
+        
+        /* Perbaikan CSS untuk Logo di Result Page */
+        .result-header-logo { 
+            width: 40px; 
+            height: 40px; 
+            margin: 0 10px; 
+            vertical-align: middle; 
+            flex-shrink: 0;
+        }
+        .result-header-logo img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            max-width: 100%; 
+            max-height: 100%; 
+        }
+        /* End Perbaikan Logo Result Page */
+
+        .result-title-container { display: flex; justify-content: center; align-items: center; }
+        .result-team-display { display: flex; align-items: center; }
+        .result-team-display.right { flex-direction: row-reverse; }
+        .footer-branding { margin-top: 15px; font-size: 0.75rem; color: #888; text-align: center; font-weight: 600; }
+
+        /* --- MODAL STYLES --- */
+        .modal-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-box { background: white; padding: 20px; border-radius: 8px; width: 300px; text-align: center; }
+        #log-modal-box { width: 350px; }
+        .modal-box select, .modal-box input { width: 100%; padding: 8px; margin: 5px 0; }
+        .card-icon { width: 15px; height: 15px; border-radius: 2px; display: inline-block; margin-right: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="resume-modal-overlay" class="hidden modal-overlay">
+        <div id="resume-modal" class="modal-box">
+            <h3>Lanjutkan Pertandingan?</h3>
+            <p>Data pertandingan sebelumnya ditemukan. Apakah Anda ingin melanjutkan?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-success" onclick="loadGame()">Lanjutkan</button>
+                <button class="btn btn-danger" onclick="clearGame()">Mulai Baru</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="log-modal-overlay" class="hidden modal-overlay">
+        <div id="log-modal-box" class="modal-box">
+            <h3>Catat Kejadian <span id="log-team-label" style="color:var(--danger)"></span></h3>
+            <input type="hidden" id="log-type-input">
+            
+            <div style="text-align:left; font-size:0.8rem; font-weight:bold;">Tipe Kejadian: <span id="log-event-label" style="font-size:1rem;"></span></div>
+
+            <div style="text-align:left; font-size:0.8rem; font-weight:bold; margin-top:10px;">Pemain (No. Punggung):</div>
+            <select id="log-player-select"></select>
+            
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-danger" onclick="closeLogModal()">Batal</button>
+                <button class="btn btn-success" onclick="confirmLog()">Catat</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sub-modal" class="hidden modal-overlay">
+        <div class="modal-box">
+            <h3>Substitusi <span id="sub-team-label"></span></h3>
+            <div style="text-align:left; font-size:0.8rem; font-weight:bold;">Pemain Masuk (Cadangan):</div>
+            <select id="sub-in-select"></select>
+            
+            <div style="text-align:left; font-size:0.8rem; font-weight:bold; margin-top:10px;">Pemain Keluar (Pitch):</div>
+            <select id="sub-out-select"></select>
+            
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-danger" onclick="closeSubModal()">Batal</button>
+                <button class="btn btn-success" onclick="confirmSub()">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="setup-page">
+        <div class="setup-header">
+            <h2>MATCH SETUP</h2>
+        </div>
+        <div class="setup-container">
+            <div class="setup-col">
+                <input type="text" id="setup-home-name" class="team-title-input" placeholder="Nama Tim Home" value="Home FC">
+                <div class="logo-upload-section">
+                    <div class="logo-preview"><img id="home-logo-preview" src="" alt="Logo Home"></div>
+                    <input type="file" id="upload-home-logo" onchange="previewLogo('home')" accept="image/*">
+                </div>
+                <span class="section-label">Starting XI (No. Punggung)</span>
+                <div class="player-inputs-grid" id="home-starters">
+                    </div>
+                <span class="section-label">Substitutes (7 Pemain)</span>
+                <div class="player-inputs-grid" id="home-subs">
+                    </div>
+            </div>
+            <div class="setup-col">
+                <input type="text" id="setup-away-name" class="team-title-input" placeholder="Nama Tim Away" value="Away FC" style="border-color: var(--danger);">
+                <div class="logo-upload-section">
+                    <div class="logo-preview"><img id="away-logo-preview" src="" alt="Logo Away"></div>
+                    <input type="file" id="upload-away-logo" onchange="previewLogo('away')" accept="image/*">
+                </div>
+                <span class="section-label">Starting XI (No. Punggung)</span>
+                <div class="player-inputs-grid" id="away-starters">
+                    </div>
+                <span class="section-label">Substitutes (7 Pemain)</span>
+                <div class="player-inputs-grid" id="away-subs">
+                    </div>
+            </div>
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 1.2rem;" onclick="startGame()">MULAI PERTANDINGAN</button>
+    </div>
+
+    <div id="main-page" class="hidden">
+        <div class="match-header">
+            <div class="team-display" id="header-home-display">
+                <div class="team-logo"><img id="disp-home-logo" src="" alt="Logo"></div>
+                <span id="disp-home-name" style="font-size:0.9rem; font-weight:bold;">HOME</span>
+            </div>
+            <div class="score-box" id="score-home">0</div>
+            
+            <div class="timer-section">
+                <div id="timer-display">00:00</div>
+                <div class="added-time-box">
+                    <span class="added-time-label" style="font-size:0.75rem;">Add Time:</span>
+                    <input type="number" id="input-added-time" min="0" value="0" onchange="updateAddedTime()">
+                    <span class="added-time-label" style="font-size:0.75rem;">Min</span>
+                    <span id="added-time-display" class="hidden" style="font-size:0.75rem; font-weight: bold;"></span>
+                </div>
+                <div class="timer-controls">
+                    <button class="btn btn-success btn-mini-text" onclick="startTimer('start')">START</button>
+                    <button class="btn btn-outline btn-mini-text" onclick="pauseTimer()">PAUSE</button>
+                    <button class="btn btn-primary btn-mini-text" onclick="stopPeriod('HT')">HT</button>
+                    <button class="btn btn-danger btn-mini-text" onclick="stopPeriod('FT')">FT</button>
+                    <button class="btn btn-outline btn-mini-text" onclick="swapPanels()" title="Swap Home/Away Panel Position">SWAP</button>
+                </div>
+            </div>
+            
+            <div class="score-box" id="score-away">0</div>
+            <div class="team-display right" id="header-away-display">
+                <div class="team-logo" style="margin-left:auto;"><img id="disp-away-logo" src="" alt="Logo"></div>
+                <span id="disp-away-name" style="font-size:0.9rem; font-weight:bold;">AWAY</span>
+            </div>
+        </div>
+
+        <div class="control-area" id="control-area">
+            <div class="team-panel home" id="panel-home">
+                <div id="home-stats-grid"></div>
+            </div>
+            
+            <div class="log-panel">
+                <h4 style="margin: 0 0 10px 0; color: #555;">MATCH LOG</h4>
+                <ul id="match-log-list" class="log-list">
+                    </ul>
+            </div>
+
+            <div class="team-panel away" id="panel-away">
+                <div id="away-stats-grid"></div>
+            </div>
+        </div>
+
+        <div class="bottom-bar">
+            <div class="progress-container">
+                <div id="bar-home" class="bar-home" style="width: 50%"></div>
+                <div id="bar-away" class="bar-away" style="width: 50%"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px;">
+                <span id="val-poss-home">50%</span>
+                <span>POSSESSION</span>
+                <span id="val-poss-away">50%</span>
+            </div>
+
+            <div class="possession-ui">
+                <button id="poss-btn-home" class="poss-btn" style="background:var(--primary); color:white;" onclick="setPossession('home')">HOME</button>
+                <button id="poss-btn-out" class="poss-btn active" style="background:#888; color:white; flex: 0.5;" onclick="setPossession('out')">OUT</button>
+                <button id="poss-btn-away" class="poss-btn" style="background:var(--danger); color:white;" onclick="setPossession('away')">AWAY</button>
+            </div>
+            <button class="btn btn-outline" style="width: 100%;" onclick="showResults()">LIHAT HASIL (Tanpa Stop Timer)</button>
+        </div>
+    </div>
+
+    <div id="result-page" class="hidden">
+        <div id="export-area" style="background: white; padding: 20px;">
+            <div style="text-align: center; border-bottom: 2px solid #ddd; padding-bottom: 15px;">
+                <h3 style="margin:0; color:#555;">MATCH STATISTICS</h3>
+                <div class="result-title-container">
+                    <div class="result-team-display">
+                        <div class="result-header-logo"><img id="res-home-logo" src="" alt="Logo"></div>
+                        <span style="color:var(--primary); font-size: 1.5rem; font-weight: bold;" id="res-home-name">HOME</span> 
+                    </div>
+                    <h1 style="margin: 10px 20px; font-size: 3rem;" id="res-score">0 - 0</h1> 
+                    <div class="result-team-display right">
+                        <div class="result-header-logo"><img id="res-away-logo" src="" alt="Logo"></div>
+                        <span style="color:var(--danger); font-size: 1.5rem; font-weight: bold;" id="res-away-name">AWAY</span>
+                    </div>
+                </div>
+                <div id="res-status" style="font-weight: bold; color: #888;"></div>
+            </div>
+            
+            <table class="result-table">
+                <tbody id="result-body"></tbody>
+            </table>
+            
+            <div class="footer-branding">
+                Powered by Data Laga
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+            <button class="btn btn-outline" onclick="backToMain()">KEMBALI KE GAME</button>
+            <button class="btn btn-success" onclick="downloadImage('png')">SAVE PNG</button>
+            <button class="btn btn-primary" onclick="downloadImage('pdf')">SAVE PDF</button>
+            <button class="btn btn-danger" onclick="clearGame(); finishGame();">RESET / MULAI BARU</button>
+        </div>
+    </div>
+
+    <script>
+        //
+        // ==================================
+        // V10 JAVASCRIPT: TIMER ADJUSTMENTS
+        // ==================================
+        //
+        const LOCAL_STORAGE_KEY = 'footballMatchState';
+
+        const statConfig = [
+            // Group 1: Shooting
+            { key: 'shots', label: 'SHOTS', type: 'grouped', group: 'Shots', subType: 'simple' },
+            { key: 'onTarget', label: 'ON TARGET', type: 'grouped', group: 'Shots', subType: 'simple' },
+            // Group 2: Passing
+            { key: 'passes', label: 'PASS SUCCESS', type: 'grouped', group: 'Passes', subType: 'simple' },
+            { key: 'miss', label: 'PASS FAIL', type: 'grouped', group: 'Passes', subType: 'simple' },
+            // Simple Stats
+            { key: 'corners', label: 'CORNERS', type: 'simple' },
+            { key: 'fouls', label: 'FOULS', type: 'simple' },
+            { key: 'offside', label: 'OFFSIDE', type: 'simple' },
+            // Logged Events 
+            { key: 'goals', label: 'GOALS', type: 'log', event: 'GOL' },
+            { key: 'yellow', label: 'YELLOW CARD', type: 'log', event: 'KUNING' },
+            { key: 'red', label: 'RED CARD', type: 'log', event: 'MERAH' },
+            { key: 'subs', label: 'SUBSTITUSI', type: 'custom' }
+        ];
+
+        let gameState = {
+            home: { name: '', logo: '', starters: [], subs: [], stats: {} },
+            away: { name: '', logo: '', starters: [], subs: [], stats: {} },
+            timer: { 
+                seconds: 0, 
+                running: false, 
+                interval: null, 
+                added: 0,
+                period: 'Pre-Game' 
+            },
+            possession: {
+                active: 'out',
+                homeSec: 0, awaySec: 0
+            },
+            logs: [], 
+            isSwapped: false 
+        };
+
+        // --- CORE UI & INIT ---
+        window.onload = function() {
+            generateInputs('home');
+            generateInputs('away');
+            checkLocalStorage();
+        };
+
+        function togglePage(pageId) {
+            document.querySelectorAll('body > div:not(.modal-overlay)').forEach(div => {
+                div.classList.add('hidden');
+            });
+            const pageElement = document.getElementById(pageId);
+            if(pageElement) pageElement.classList.remove('hidden');
+        }
+
+        // --- LOCAL STORAGE ---
+        function saveGame() {
+            const savedState = JSON.parse(JSON.stringify(gameState)); 
+            if (savedState.timer.interval) savedState.timer.interval = null;
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(savedState));
+        }
+
+        function clearGame() {
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            const resumeModal = document.getElementById('resume-modal-overlay');
+            if(resumeModal) resumeModal.classList.add('hidden');
+        }
+
+        function checkLocalStorage() {
+            const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+            const resumeModal = document.getElementById('resume-modal-overlay');
+            if (savedData && resumeModal) {
+                resumeModal.classList.remove('hidden');
+            }
+        }
+
+        function loadGame() {
+            const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (!savedData) return;
+            try {
+                const parsedState = JSON.parse(savedData);
+                gameState = parsedState;
+
+                if (gameState.timer.interval) clearInterval(gameState.timer.interval);
+                
+                // Restore Setup UI inputs
+                document.getElementById('setup-home-name').value = gameState.home.name || '';
+                document.getElementById('setup-away-name').value = gameState.away.name || '';
+                if (gameState.home.logo) document.getElementById('home-logo-preview').src = gameState.home.logo;
+                if (gameState.away.logo) document.getElementById('away-logo-preview').src = gameState.away.logo;
+
+                const fillInputs = (team, type, data) => {
+                    const inputs = document.querySelectorAll(`#${team}-${type}s input`);
+                    inputs.forEach((input, index) => {
+                        if (input) input.value = data[index] || '';
+                    });
+                };
+                fillInputs('home', 'starter', gameState.home.starters);
+                fillInputs('home', 'sub', gameState.home.subs);
+                fillInputs('away', 'starter', gameState.away.starters);
+                fillInputs('away', 'sub', gameState.away.subs);
+
+                setupMainPageUI();
+                updateTimerDisplay();
+                updateAllStatDisplays();
+                setPossession(gameState.possession.active); 
+                
+                if(gameState.isSwapped) swapPanels(true);
+
+                document.getElementById('resume-modal-overlay').classList.add('hidden');
+                togglePage('main-page');
+                
+                if (gameState.timer.running) startTimer('resume');
+
+            } catch (e) {
+                console.error("Gagal memuat game dari Local Storage:", e);
+                clearGame();
+                alert("Data game tersimpan korup. Memulai game baru.");
+                document.getElementById('resume-modal-overlay').classList.add('hidden');
+            }
+        }
+
+        // --- SETUP LOGIC (omitted for brevity) ---
+        function generateInputs(team) {
+            const starterDiv = document.getElementById(`${team}-starters`);
+            const subDiv = document.getElementById(`${team}-subs`);
+            if (!starterDiv || !subDiv) return;
+
+            starterDiv.innerHTML = '';
+            subDiv.innerHTML = '';
+            
+            for(let i=1; i<=11; i++) { starterDiv.innerHTML += `<input type="number" class="player-input starter" placeholder="${i}">`; }
+            for(let i=1; i<=7; i++) { subDiv.innerHTML += `<input type="number" class="player-input sub" placeholder="S${i}">`; }
+        }
+
+        function previewLogo(team) { 
+            const fileInput = document.getElementById(`upload-${team}-logo`);
+            const previewEl = document.getElementById(`${team}-logo-preview`);
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onloadend = function () {
+                previewEl.src = reader.result;
+                gameState[team].logo = reader.result; 
+                saveGame();
+            }
+
+            if (file) {
+                reader.readAsDataURL(file);
+            } else {
+                previewEl.src = "";
+                gameState[team].logo = "";
+            }
+        }
+
+        function startGame() {
+            // Collect Data
+            gameState.home.name = document.getElementById('setup-home-name').value || 'Home FC';
+            gameState.away.name = document.getElementById('setup-away-name').value || 'Away FC';
+            
+            // Collect Players
+            const collectPlayers = (team, type) => {
+                const inputs = document.querySelectorAll(`#${team}-${type}s input`);
+                const players = [];
+                inputs.forEach(inp => { 
+                    const val = inp.value.trim();
+                    if(val && !isNaN(val) && parseInt(val) > 0) { 
+                        players.push(val); 
+                    }
+                });
+                return players;
+            };
+
+            gameState.home.starters = collectPlayers('home', 'starter');
+            gameState.home.subs = collectPlayers('home', 'sub');
+            gameState.away.starters = collectPlayers('away', 'starter');
+            gameState.away.subs = collectPlayers('away', 'sub');
+
+            // INIT STATS DENGAN AMAN
+            ['home', 'away'].forEach(team => {
+                gameState[team].stats = {}; 
+                statConfig.forEach(s => {
+                    gameState[team].stats[s.key] = 0;
+                });
+            });
+
+            // Reset game state
+            gameState.timer.seconds = 0;
+            gameState.timer.period = 'Pre-Game';
+            gameState.timer.running = false;
+            gameState.logs = [];
+            gameState.isSwapped = false; 
+            gameState.possession.homeSec = 0;
+            gameState.possession.awaySec = 0;
+            
+            setupMainPageUI();
+            saveGame();
+            togglePage('main-page');
+        }
+
+        function setupMainPageUI() {
+            // Update Header Display
+            const dispHomeName = document.getElementById('disp-home-name');
+            const dispAwayName = document.getElementById('disp-away-name');
+            const dispHomeLogo = document.getElementById('disp-home-logo');
+            const dispAwayLogo = document.getElementById('disp-away-logo');
+
+            if (dispHomeName) dispHomeName.innerText = gameState.home.name;
+            if (dispAwayName) dispAwayName.innerText = gameState.away.name;
+            if (dispHomeLogo) dispHomeLogo.src = gameState.home.logo || '';
+            if (dispAwayLogo) dispAwayLogo.src = gameState.away.logo || '';
+            
+            // Render Grids
+            renderStatsGrid('home');
+            renderStatsGrid('away');
+            renderMatchLog();
+            updatePossessionBar(); 
+
+            // Reset Swap Position
+            const area = document.getElementById('control-area');
+            const homePanel = document.getElementById('panel-home');
+            const awayPanel = document.getElementById('panel-away');
+            
+            if (area && homePanel && awayPanel) {
+                if (gameState.isSwapped) {
+                    area.insertBefore(awayPanel, homePanel);
+                } else {
+                    area.insertBefore(homePanel, awayPanel);
+                }
+
+                document.getElementById('header-home-display').classList.toggle('right', gameState.isSwapped);
+                document.getElementById('header-away-display').classList.toggle('right', !gameState.isSwapped);
+            }
+        }
+        
+        // --- STATS GRID RENDERING (omitted for brevity) ---
+        function renderStatsGrid(team) {
+            const container = document.getElementById(`${team}-stats-grid`);
+            if (!container) return; 
+            container.innerHTML = '';
+            
+            const groups = {};
+            statConfig.forEach(s => {
+                if (s.type === 'grouped') {
+                    if (!groups[s.group]) groups[s.group] = [];
+                    groups[s.group].push(s);
+                }
+            });
+
+            for (const groupName in groups) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'stats-group';
+                groupDiv.innerHTML = `<div class="stat-group-label">${groupName.toUpperCase()}</div>`;
+                
+                groups[groupName].forEach(stat => {
+                    groupDiv.innerHTML += createStatCard(team, stat);
+                });
+                container.appendChild(groupDiv);
+            }
+            
+            statConfig.filter(s => s.type !== 'grouped').forEach(stat => {
+                if (stat.type === 'simple' || stat.type === 'log' || stat.type === 'custom') {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'stats-group';
+                    
+                    if (stat.type === 'custom' && stat.key === 'subs') {
+                        groupDiv.innerHTML = `
+                            <div class="stat-card">
+                                <span class="stat-label">${stat.label}</span>
+                                <div class="stat-action">
+                                    <span id="val-${team}-${stat.key}" class="stat-val-disp">${gameState[team].stats[stat.key] || 0}</span>
+                                    <button class="btn btn-primary btn-mini" style="width:auto; padding:0 8px;" onclick="openSubModal('${team}')">SUB</button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        groupDiv.innerHTML += createStatCard(team, stat);
+                    }
+                    container.appendChild(groupDiv);
+                }
+            });
+            updateAllStatDisplays();
+        }
+        
+        function createStatCard(team, stat) {
+            let actions;
+            if (stat.type === 'log') {
+                const icon = stat.key === 'yellow' ? '<span class="card-icon" style="background:#ffd700;"></span>' : 
+                             stat.key === 'red' ? '<span class="card-icon" style="background:red;"></span>' : 
+                             '';
+                actions = `
+                    <div class="stat-action">
+                        ${icon}
+                        <span id="val-${team}-${stat.key}" class="stat-val-disp">${gameState[team].stats[stat.key] || 0}</span>
+                        <button class="btn-inc btn-danger" onclick="openLogModal('${team}', '${stat.event}')" style="margin-left: 5px;">+</button>
+                    </div>
+                `;
+            } else if (stat.type === 'simple' || stat.type === 'grouped') { 
+                actions = `
+                    <div class="stat-action">
+                        <button class="btn-dec" onclick="updateStat('${team}', '${stat.key}', -1)">-</button>
+                        <span id="val-${team}-${stat.key}" class="stat-val-disp">${gameState[team].stats[stat.key] || 0}</span>
+                        <button class="btn-inc" onclick="updateStat('${team}', '${stat.key}', 1)">+</button>
+                    </div>
+                `;
+            } else {
+                return ''; 
+            }
+
+            return `
+                <div class="stat-card">
+                    <span class="stat-label">${stat.label}</span>
+                    ${actions}
+                </div>
+            `;
+        }
+        
+        function updateAllStatDisplays() {
+            ['home', 'away'].forEach(team => {
+                const scoreEl = document.getElementById(`score-${team}`);
+                if (scoreEl) scoreEl.innerText = gameState[team].stats.goals || 0;
+                statConfig.forEach(stat => {
+                    const el = document.getElementById(`val-${team}-${stat.key}`);
+                    if(el) el.innerText = gameState[team].stats[stat.key] || 0;
+                });
+            });
+        }
+
+        // --- TIMER LOGIC BARU ---
+        
+        function startTimer(mode) {
+            if(gameState.timer.running) return;
+            if(gameState.timer.period === 'Finished') {
+                 alert("Pertandingan sudah selesai (FT). Silakan mulai game baru.");
+                 return;
+            }
+
+            if (mode === 'start' && gameState.timer.period === 'Pre-Game') {
+                gameState.timer.seconds = 0;
+                gameState.timer.period = 'First_Half';
+            } else if (mode === 'start' && gameState.timer.period === 'Halftime_Paused') {
+                gameState.timer.seconds = 45 * 60; // Mulai dari 45:00
+                gameState.timer.period = 'Second_Half';
+            } else if (mode === 'start' && gameState.timer.seconds >= 45 * 60 && gameState.timer.period === 'First_Half') {
+                 // Kasus user klik START setelah timer melewati 45 menit tanpa klik HT
+                 gameState.timer.period = 'Second_Half';
+            }
+            
+            gameState.timer.running = true;
+            
+            // Tampilkan added time display setelah start
+            document.getElementById('added-time-display').classList.remove('hidden');
+
+            gameState.timer.interval = setInterval(() => {
+                gameState.timer.seconds++;
+                updateTimerDisplay();
+                
+                // Possession Calc
+                if(gameState.timer.running) {
+                    if(gameState.possession.active === 'home') gameState.possession.homeSec++;
+                    if(gameState.possession.active === 'away') gameState.possession.awaySec++;
+                }
+                updatePossessionBar();
+                
+                if (gameState.timer.seconds % 10 === 0) saveGame(); 
+            }, 1000);
+
+            saveGame();
+        }
+
+        function pauseTimer() {
+            if(!gameState.timer.running) return;
+            gameState.timer.running = false;
+            clearInterval(gameState.timer.interval);
+            gameState.timer.interval = null;
+            saveGame();
+        }
+
+        function stopPeriod(type) {
+            pauseTimer();
+            
+            if(type === 'HT') {
+                // Atur timer ke 45:00 (Awal Babak Kedua)
+                gameState.timer.seconds = 45 * 60; 
+                gameState.timer.period = 'Halftime_Paused';
+                updateTimerDisplay(); // Update display segera
+                alert("BABAK PERTAMA SELESAI. Stopwatch dihentikan. Tekan START untuk Babak Kedua.");
+            } else if (type === 'FT') {
+                gameState.timer.period = 'Finished';
+                // Jika ingin menit berhenti di 90:00 (Jika game sudah berlangsung)
+                // if (gameState.timer.seconds < 90 * 60) { gameState.timer.seconds = 90 * 60; }
+                updateTimerDisplay(); 
+                alert("PERTANDINGAN SELESAI. FULL TIME.");
+            }
+            saveGame();
+        }
+        
+        function updateAddedTime() {
+             const addedVal = parseInt(document.getElementById('input-added-time').value) || 0;
+             gameState.timer.added = addedVal;
+             updateTimerDisplay();
+             saveGame();
+        }
+
+        function updateTimerDisplay() {
+            const totalSec = gameState.timer.seconds;
+            const m = Math.floor(totalSec / 60);
+            const s = totalSec % 60;
+            
+            let timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            let addedTimeDisplay = '';
+
+            const addedVal = gameState.timer.added;
+            if (addedVal > 0) addedTimeDisplay = ` +${addedVal}'`;
+            
+            document.getElementById('timer-display').innerText = timeStr;
+            const addedEl = document.getElementById('added-time-display');
+            if (addedEl) addedEl.innerText = addedTimeDisplay;
+            
+            // Sembunyikan added time jika belum start
+            if (gameState.timer.period === 'Pre-Game') {
+                 addedEl.classList.add('hidden');
+            } else {
+                 addedEl.classList.remove('hidden');
+            }
+        }
+        // --- END TIMER LOGIC BARU ---
+        
+        // --- STATS & POSSESSION (omitted for brevity) ---
+        function updateStat(team, key, val) {
+            if(val < 0 && (gameState[team].stats[key] || 0) <= 0) return;
+
+            gameState[team].stats[key] = (gameState[team].stats[key] || 0) + val;
+            const el = document.getElementById(`val-${team}-${key}`);
+            if(el) el.innerText = gameState[team].stats[key];
+
+            if(key === 'goals') {
+                const scoreEl = document.getElementById(`score-${team}`);
+                if (scoreEl) scoreEl.innerText = gameState[team].stats.goals;
+            }
+            saveGame();
+        }
+
+        function setPossession(type) { 
+            gameState.possession.active = type;
+            document.querySelectorAll('.poss-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById(`poss-btn-${type}`);
+            if(btn) btn.classList.add('active');
+            saveGame();
+        }
+
+        function updatePossessionBar() { 
+            const h = gameState.possession.homeSec;
+            const a = gameState.possession.awaySec;
+            const total = h + a;
+            let hPerc = 50; 
+            
+            if(total > 0) hPerc = (h / total) * 100;
+            
+            const barHome = document.getElementById('bar-home');
+            const barAway = document.getElementById('bar-away');
+            const valPossHome = document.getElementById('val-poss-home');
+            const valPossAway = document.getElementById('val-poss-away');
+
+            if (barHome) barHome.style.width = hPerc + '%';
+            if (barAway) barAway.style.width = (100 - hPerc) + '%';
+            
+            if (valPossHome) valPossHome.innerText = Math.round(hPerc) + '%';
+            if (valPossAway) valPossAway.innerText = Math.round(100 - hPerc) + '%';
+        }
+
+        // --- SWAP LOGIC (omitted for brevity) ---
+        function swapPanels(isLoad = false) {
+            const area = document.getElementById('control-area');
+            const homePanel = document.getElementById('panel-home');
+            const awayPanel = document.getElementById('panel-away');
+            
+            const homeHeader = document.getElementById('header-home-display');
+            const awayHeader = document.getElementById('header-away-display');
+
+            if (!area || !homePanel || !awayPanel || !homeHeader || !awayHeader) return;
+
+            if (gameState.isSwapped) {
+                area.insertBefore(homePanel, awayPanel);
+                homeHeader.classList.remove('right');
+                awayHeader.classList.add('right');
+                gameState.isSwapped = false;
+            } else {
+                area.insertBefore(awayPanel, homePanel);
+                homeHeader.classList.add('right');
+                awayHeader.classList.remove('right');
+                gameState.isSwapped = true;
+            }
+            
+            if (!isLoad) saveGame();
+        }
+
+        // --- LOG/TIMELINE LOGIC (omitted for brevity) ---
+        let currentLogTeam = '';
+        let currentLogEvent = '';
+
+        function openLogModal(team, event) {
+            currentLogTeam = team;
+            currentLogEvent = event;
+
+            const nameEl = document.getElementById('log-team-label');
+            const eventEl = document.getElementById('log-event-label');
+            const modalEl = document.getElementById('log-modal-overlay');
+            const select = document.getElementById('log-player-select');
+
+            if (!nameEl || !eventEl || !modalEl || !select) return;
+
+            nameEl.innerText = gameState[team].name.toUpperCase();
+            nameEl.style.color = team === 'home' ? 'var(--primary)' : 'var(--danger)';
+            eventEl.innerText = event;
+            modalEl.classList.remove('hidden');
+
+            select.innerHTML = '<option value="">-- Pilih Pemain --</option>';
+
+            const players = [...gameState[team].starters]; 
+            players.sort((a, b) => parseInt(a) - parseInt(b)).forEach(num => {
+                select.innerHTML += `<option value="${num}">No. ${num}</option>`;
+            });
+        }
+
+        function closeLogModal() {
+            const modalEl = document.getElementById('log-modal-overlay');
+            if (modalEl) modalEl.classList.add('hidden');
+        }
+
+        function confirmLog() {
+            const playerNum = document.getElementById('log-player-select').value;
+            if (!playerNum) {
+                alert("Harap pilih nomor pemain!");
+                return;
+            }
+            
+            const team = currentLogTeam;
+            const event = currentLogEvent;
+            
+            let statKey = statConfig.find(s => s.event === event).key;
+            gameState[team].stats[statKey] = (gameState[team].stats[statKey] || 0) + 1;
+            
+            const m = Math.floor(gameState.timer.seconds / 60).toString().padStart(2, '0');
+            const minStr = `${m}'`;
+            
+            gameState.logs.push({
+                time: minStr,
+                team: team,
+                event: event,
+                player: playerNum
+            });
+
+            updateAllStatDisplays();
+            renderMatchLog();
+            saveGame();
+            closeLogModal();
+        }
+
+        function renderMatchLog() {
+            const list = document.getElementById('match-log-list');
+            if (!list) return; 
+            list.innerHTML = '';
+            
+            const sortedLogs = [...gameState.logs].reverse(); 
+
+            sortedLogs.forEach(log => {
+                const color = log.team === 'home' ? 'var(--primary)' : 'var(--danger)';
+                const eventColor = log.event === 'GOL' ? 'var(--accent)' : log.event === 'KUNING' ? '#ffd700' : 'red';
+                const eventIcon = log.event === 'KUNING' || log.event === 'MERAH' ? `<span class="card-icon" style="background:${eventColor}"></span>` : '';
+                
+                list.innerHTML += `
+                    <li class="log-item" style="color:${color};">
+                        <strong>${log.time}</strong> ${log.team.toUpperCase()} - ${eventIcon} ${log.event} (No. ${log.player})
+                    </li>
+                `;
+            });
+        }
+
+        // --- SUB LOGIC (omitted for brevity) ---
+        let tempSubTeam = '';
+        function openSubModal(team) {
+            tempSubTeam = team;
+            const teamLabel = document.getElementById('sub-team-label');
+            const selIn = document.getElementById('sub-in-select');
+            const selOut = document.getElementById('sub-out-select');
+            const modalEl = document.getElementById('sub-modal');
+
+            if (!teamLabel || !selIn || !selOut || !modalEl) return;
+
+            teamLabel.innerText = gameState[team].name;
+            selIn.innerHTML = '<option value="">-- Pilih Pemain Masuk --</option>'; 
+            selOut.innerHTML = '<option value="">-- Pilih Pemain Keluar --</option>';
+
+            gameState[team].subs.forEach(num => {
+                selIn.innerHTML += `<option value="${num}">No. ${num}</option>`;
+            });
+            gameState[team].starters.forEach(num => {
+                selOut.innerHTML += `<option value="${num}">No. ${num}</option>`;
+            });
+
+            modalEl.classList.remove('hidden');
+        }
+
+        function closeSubModal() {
+            const modalEl = document.getElementById('sub-modal');
+            if(modalEl) modalEl.classList.add('hidden');
+        }
+
+        function confirmSub() {
+            const pIn = document.getElementById('sub-in-select').value;
+            const pOut = document.getElementById('sub-out-select').value;
+            
+            if(!pIn || !pOut) {
+                alert("Harap pilih pemain masuk dan keluar.");
+                return;
+            }
+            
+            const team = tempSubTeam;
+            
+            const idxOut = gameState[team].starters.indexOf(pOut);
+            if(idxOut !== -1) gameState[team].starters[idxOut] = pIn; 
+
+            gameState[team].subs = gameState[team].subs.filter(n => n !== pIn);
+            gameState[team].subs.push(pOut);
+            
+            gameState[team].stats.subs = (gameState[team].stats.subs || 0) + 1; 
+            
+            saveGame();
+            updateAllStatDisplays();
+            
+            closeSubModal();
+            alert(`Substitusi Berhasil: No. ${pIn} Masuk, No. ${pOut} Keluar`);
+        }
+
+
+        // --- RESULTS & DOWNLOAD (omitted for brevity) ---
+        function showResults() {
+            togglePage('result-page');
+            
+            const resHomeName = document.getElementById('res-home-name');
+            const resAwayName = document.getElementById('res-away-name');
+            const resHomeLogo = document.getElementById('res-home-logo');
+            const resAwayLogo = document.getElementById('res-away-logo');
+            const resScore = document.getElementById('res-score');
+            const resStatus = document.getElementById('res-status');
+            const tbody = document.getElementById('result-body');
+
+            if (!resHomeName || !resAwayName || !resScore || !resStatus || !tbody) return;
+
+            resHomeName.innerText = gameState.home.name;
+            resAwayName.innerText = gameState.away.name;
+            resHomeLogo.src = gameState.home.logo || '';
+            resAwayLogo.src = gameState.away.logo || '';
+
+            resScore.innerText = 
+                `${gameState.home.stats.goals || 0} - ${gameState.away.stats.goals || 0}`;
+            resStatus.innerText = 
+                gameState.timer.period === 'Finished' ? 'FULL TIME' : 
+                gameState.timer.period === 'Halftime_Paused' ? 'HALF TIME' : 'LIVE STATS';
+
+
+            tbody.innerHTML = '';
+
+            const hPoss = document.getElementById('val-poss-home').innerText;
+            const aPoss = document.getElementById('val-poss-away').innerText;
+            addRowResult(hPoss, 'POSSESSION', aPoss);
+
+            const calculateAccuracy = (team) => {
+                const pass = gameState[team].stats.passes || 0;
+                const miss = gameState[team].stats.miss || 0;
+                const total = pass + miss;
+                return total === 0 ? '0%' : Math.round((pass/total)*100) + '%';
+            }
+            const hAcc = calculateAccuracy('home');
+            const aAcc = calculateAccuracy('away');
+
+            addRowResult(gameState.home.stats.shots || 0, 'SHOTS', gameState.away.stats.shots || 0);
+            addRowResult(gameState.home.stats.onTarget || 0, 'SHOTS ON TARGET', gameState.away.stats.onTarget || 0);
+            addRowResult(gameState.home.stats.passes || 0, 'PASSES COMPLETED', gameState.away.stats.passes || 0);
+            addRowResult(gameState.home.stats.miss || 0, 'PASSES FAILED', gameState.away.stats.miss || 0);
+            addRowResult(hAcc, 'PASS ACCURACY', aAcc);
+            
+            ['corners', 'fouls', 'offside', 'goals', 'yellow', 'red', 'subs'].forEach(k => {
+                const statItem = statConfig.find(x => x.key === k);
+                if (statItem) {
+                    addRowResult(gameState.home.stats[k] || 0, statItem.label, gameState.away.stats[k] || 0);
+                }
+            });
+            
+            if (gameState.logs.length > 0) {
+                 addRowResult('', '--- MATCH LOG SUMMARY ---', '');
+                 addRowResult(gameState.logs.length, `(${gameState.logs.length} Total Kejadian)`, '');
+            }
+        }
+
+        function addRowResult(h, label, a) {
+            document.getElementById('result-body').innerHTML += `
+                <tr>
+                    <td style="font-weight:bold; color:var(--primary);">${h}</td>
+                    <td style="font-size:0.9rem; color:#666;">${label}</td>
+                    <td style="font-weight:bold; color:var(--danger);">${a}</td>
+                </tr>
+            `;
+        }
+        
+        async function downloadImage(format) {
+            const exportArea = document.getElementById('export-area');
+            if (!exportArea) return;
+            
+            const canvas = await html2canvas(exportArea, { scale: 2 });
+            const filename = `DataLaga-Stats-${gameState.home.name}-vs-${gameState.away.name}`;
+
+            if (format === 'png') {
+                const link = document.createElement('a');
+                link.download = `${filename}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } else if (format === 'pdf') {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 180; 
+                const ratio = imgWidth / canvas.width;
+                const pdfHeight = canvas.height * ratio;
+
+                pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, pdfHeight);
+
+                pdf.save(`${filename}.pdf`);
+            }
+        }
+
+        function backToMain() {
+            togglePage('main-page');
+        }
+
+        function finishGame() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>
